@@ -1,0 +1,417 @@
+---
+alwaysApply: true
+---
+# Terraform Module Structure and Naming Conventions
+
+This rule establishes the standard file organization, directory structure, README format, and naming conventions for Terraform modules at Playtomic.
+
+## File Structure and Organization
+
+### Required Files
+
+Every Terraform module MUST include these core files:
+
+- **`main.tf`** - Primary resource definitions
+- **`variables.tf`** - All input variable definitions
+- **`outputs.tf`** - All output value definitions
+- **`providers.tf`** - Provider requirements and configurations
+- **`locals.tf`** - Local value definitions (optional for small modules)
+- **`data.tf`** - Data source definitions (optional for small modules)
+- **`README.md`** - Module documentation
+- **`.gitignore`** - Standard Terraform gitignore
+- **`CODEOWNERS`** - Repository ownership (@syltek/guild-infrastructure)
+- **`.github/workflows/workflow.yaml`** - CI/CD pipeline
+- **`testing/test.tf`** - Module testing configuration. Reference @module-test.mdc for more details.
+
+### File Organization Guidelines
+
+**For small modules:**
+- If the module has only 1-2 resources, minimal locals (e.g., just tags), and 1-2 data sources, you can consolidate everything in `main.tf`
+- Keep `variables.tf`, `outputs.tf`, and `providers.tf` separate even for small modules
+- This reduces unnecessary file fragmentation and makes the module easier to navigate
+
+**For larger modules:**
+- Always separate `locals.tf` and `data.tf` when you have:
+  - More than 2-3 resources
+  - Complex local value computations
+  - Multiple data sources
+  - Locals used for complex transformations or mappings
+
+**Example of a small module structure:**
+```
+terraform-aws-simple-resource/
+├── main.tf           # Contains resources, locals, and data sources
+├── variables.tf
+├── outputs.tf
+├── providers.tf
+├── README.md
+└── testing/test.tf
+```
+
+### Optional Files
+
+- **Template files** - `*.tftpl` files for dynamic content (e.g., alert destinations, monitor descriptions)
+
+### Directory Structure
+
+**Standard module structure (for larger modules):**
+```
+terraform-{provider}-{service}/
+├── main.tf
+├── variables.tf
+├── outputs.tf
+├── providers.tf
+├── locals.tf
+├── data.tf
+├── README.md
+├── .gitignore
+├── CODEOWNERS
+├── .github/
+│   └── workflows/
+│       └── workflow.yaml
+├── testing/
+│   └── test.tf
+└── {templates}/ (if applicable)
+    ├── *.tftpl
+    └── *.md.tftpl
+```
+
+**Small module structure (when consolidating in main.tf):**
+```
+terraform-{provider}-{service}/
+├── main.tf          # Contains resources, locals, and data sources
+├── variables.tf
+├── outputs.tf
+├── providers.tf
+├── README.md
+├── .gitignore
+├── CODEOWNERS
+├── .github/
+│   └── workflows/
+│       └── workflow.yaml
+└── testing/
+    └── test.tf
+```
+
+## Variable Conventions
+
+### Standard Variable Structure
+
+We use a `metadata` variable of type object to store the metadata information for the module. This variable is required and must be defined in the module. The exact fields depend on the module's context:
+
+**Common metadata fields:**
+- `name` (required): The resource name
+- `description` (optional): Resource description (use this instead of putting description in `config`)
+- `account` (optional): AWS account identifier (for account-specific resources)
+- `environment` (optional): Environment name (develop, staging, production)
+- `tags` (required): Additional tags to apply to resources
+
+Example for account-specific resources (e.g., RDS, EC2):
+```hcl
+variable "metadata" {
+  type = object({
+    name        = string
+    description = optional(string)
+    account     = string
+    environment = string
+    tags        = map(string)
+  })
+  description = "The metadata information for the module."
+}
+```
+
+Example for account-agnostic resources (e.g., IAM, SSO):
+```hcl
+variable "metadata" {
+  type = object({
+    name        = string
+    description = string
+    tags        = map(string)
+  })
+  description = "The metadata information for the module."
+}
+```
+
+For configuration variables, use the `config` variable of type object. Make the entire variable optional with a default when all fields are optional:
+```hcl
+variable "config" {
+  type = object({
+    session_duration     = optional(string, "PT12H")
+    managed_policies_arn = optional(list(string), [])
+    inline_policy        = optional(string, null)
+  })
+  description = "Configuration for the resource."
+  default     = {}
+}
+```
+
+If the `config` variable becomes too complex, group related configuration into separate objects:
+```hcl
+variable "nodes" {
+  type = object({
+    instance_type = string
+    count         = optional(number, 3)
+  })
+  description = "Node configuration."
+}
+```
+
+### Variable Naming Conventions
+
+- Use **snake_case** for all variable names
+- Group related configuration into **nested objects**
+- Use **`optional()`** with sensible defaults for non-required fields
+- Always provide comprehensive **descriptions**
+- Place resource **descriptions** in `metadata`, not in `config`
+
+### Variable Description Conventions
+
+- For the object variables, describe all the fields in the object.
+- Do not include examples for the object variables.
+- If the variable is optional, start the description with "(Optional)".
+- If the variable has a default value, include it in the description. Example: "Defaults to `PT12H`".
+
+### Key Design Principles
+
+1. **Description Placement**: Always place resource descriptions in the `metadata` object, not in `config`. The `config` object is for operational/behavioral configuration only.
+
+2. **Optional Config**: When all fields in the `config` object are optional, make the entire `config` variable optional with `default = {}`. This allows users to omit the config block entirely for minimal configurations.
+
+3. **Metadata Flexibility**: Adapt the `metadata` structure to the module's context:
+   - Include `account` and `environment` only for account-specific resources
+   - Always include `name` and `tags`
+   - Include `description` when the resource supports descriptions
+
+4. **Default Values**: Use `optional()` with sensible defaults for config fields to minimize required user input while maintaining flexibility.
+
+### Variable Validation
+
+When possible, validate the variables using the `validation` block. Example:
+
+## Local Values Conventions
+
+Set the local values in the `locals.tf` file.
+
+### Local Naming Conventions
+
+- Use **snake_case** for local names
+- Include **standard tags** for all resources.
+- Create **identifier patterns** for consistent naming
+- Use **environment mappings** for short names
+
+### Standard Tags
+
+Include the following tags in the `module_tags` local value. The exact tags depend on the module's context:
+
+**For account-specific resources** (e.g., RDS, EC2, VPC):
+```hcl
+module_tags = merge(
+  {
+    managed_by       = "terraform"
+    terraform_module = "[module-name]"
+    account          = var.metadata.account
+    env              = var.metadata.environment
+  },
+  var.metadata.tags
+)
+```
+
+**For account-agnostic resources** (e.g., IAM, SSO):
+```hcl
+module_tags = merge(
+  {
+    managed_by       = "terraform"
+    terraform_module = "[module-name]"
+  },
+  var.metadata.tags
+)
+```
+## Provider Configuration
+
+### Standard Provider Structure
+
+```hcl
+terraform {
+  required_version = ">= 1.9.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.92"
+    }
+    # Add other providers as needed with specific versions
+  }
+}
+
+# Configure providers only when necessary (e.g., database providers)
+provider "mysql" {
+  endpoint   = aws_rds_cluster.cluster.endpoint
+  username   = var.cluster.master_username
+  password   = aws_rds_cluster.cluster.master_password
+  private_ip = true
+}
+```
+
+### Provider Version Constraints
+
+- Always specify **minimum Terraform version** (>= 1.9.0)
+- Use **pessimistic constraints** (`~>`) for providers
+- Pin **exact versions** for critical or unstable providers
+
+## Output Conventions
+
+### Standard Output Structure
+
+```hcl
+output "arn" {
+  value       = aws_resource.main.arn
+  description = "The ARN of the created [resource]."
+}
+
+output "endpoint" {
+  value       = aws_resource.main.endpoint
+  description = "The endpoint/address of the [resource]."
+}
+
+output "id" {
+  value       = aws_resource.main.id
+  description = "The identifier of the [resource]."
+}
+
+# Sensitive outputs
+output "password" {
+  value       = random_password.password.result
+  description = "The generated password."
+  sensitive   = true
+}
+```
+
+### Output Naming Conventions
+
+- Use **clear, descriptive names**
+- Always include **descriptions**
+- Mark sensitive values with **`sensitive = true`**
+- Export **commonly needed attributes**
+
+## Documentation Conventions
+
+### README.md Structure
+
+Follow this standardized structure:
+
+```markdown
+# terraform-{provider}-{service}
+
+Brief description of what the module creates.
+
+## Important Notes
+Key considerations, limitations, or special requirements.
+
+## Inputs
+Copy the variables descriptions from the variables.tf file. Example:
+
+```md
+- `metadata`: The metadata information for the module.
+  - `name`: The name of the resource
+  - `description`: The description of the resource
+  - `account`: (Optional) The account identifier
+  - `environment`: (Optional) The environment name
+  - `tags`: Additional tags to apply to the resources
+
+- `config`: (Optional) Configuration for the resource. Defaults to `{}`.
+  - `field_name`: (Optional) Description of the field. Defaults to `value`
+```
+
+## Outputs
+Copy the outputs descriptions from the outputs.tf file. Example:
+```md
+- `arn`: The Amazon Resource Name (ARN) of the resource.
+```
+
+## Usage
+Complete usage example with real values. Show multiple examples for different use cases.
+
+**For account-specific resources:**
+```hcl
+module "example" {
+  source  = "app.terraform.io/Playtomic/{service}/{provider}"
+  version = "~> 0.1"
+
+  metadata = {
+    name        = "example"
+    description = "Example resource description"
+    account     = "example-account"
+    environment = "develop"
+    tags = {
+      team = "infrastructure"
+    }
+  }
+
+  config = {
+    # Example configuration
+  }
+}
+```
+
+**For account-agnostic resources:**
+```hcl
+module "example" {
+  source  = "app.terraform.io/Playtomic/{service}/{provider}"
+  version = "~> 0.1"
+
+  metadata = {
+    name        = "ExampleResource"
+    description = "Example resource description"
+    tags = {
+      team = "infrastructure"
+    }
+  }
+
+  config = {
+    # Example configuration
+  }
+}
+```
+
+### Documentation Best Practices
+
+- Always include **real, working examples**
+- Document **all variables** with clear descriptions
+- Include **Important Notes** section for special considerations
+- Use **auto-generated tables** for requirements, providers, and resources
+- Reference **workflow documentation** for automatic variable injection
+
+## CI/CD Pipeline
+
+### Standard Workflow (`.github/workflows/workflow.yaml`)
+
+```yaml
+name: Terraform Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    uses: syltek/gh-workflows/.github/workflows/terraform_modules.yaml@main
+    secrets: inherit
+```
+
+## Repository Conventions
+
+### Repository Naming
+
+- Use format: **`terraform-{provider}-{service}`**
+- Examples: `terraform-aws-rds-pgsql`, `terraform-datadog-mongodb-atlas`
+
+### CODEOWNERS Configuration
+
+```
+# Infrastructure is the owner of this repo
+
+*       @syltek/guild-infrastructure
+```

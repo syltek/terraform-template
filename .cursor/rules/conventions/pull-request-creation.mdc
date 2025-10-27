@@ -1,0 +1,99 @@
+---
+description: Guidelines for creating pull requests in the terraform module project
+globs:
+alwaysApply: false
+---
+# Pull Request Creation Guide
+
+This guide explains how to create pull requests following the project's standards. All PRs must use the following format:
+
+```
+## Context
+
+Provide context about the changes and explanation about the implementation.
+
+## Evidences
+
+Explain how this change has been tested.
+```
+
+## Before Creating a Pull Request
+
+### 1. Code Quality Checks
+- **Format the code** (REQUIRED - PRs will be automatically rejected if not properly formatted)
+
+To format the terraform file, you cun run `terraform fmt .`.
+
+### 2. Git Workflow
+- **Create a feature branch**: Use descriptive branch names. Use the linnear task id as preffix.
+  ```bash
+  git checkout -b inf-123_your_feature_name
+  ```
+- **Commit your changes**: Use clear, descriptive commit messages
+  ```bash
+  git add .
+  git commit -m "INF-123: Add new payment method validation" -m "Description of the changes"
+  ```
+
+## Pull Request Best Practices
+
+### 1. PR Title and Description
+- **Use clear, descriptive titles**: Start with action verbs (Add, Fix, Update, Refactor)
+- **Provide context**: Explain what the change does and why it's needed
+- **Reference Linear tasks**: Link to related Linear Tasks. Follow this pattern: `<Linnear Task Id>: <PR title>`
+
+### 2. PR Size and Scope
+- **Keep PRs focused**: One feature or fix per PR
+- **One commit per PR**: To keep a linear Git history.
+- **Limit file changes**: Aim for <500 lines of changes when possible
+- **Break down large features**: Split into multiple smaller PRs
+
+### 3. Code Review Preparation
+- **Self-review first**: Review your own changes before submitting
+- **Add comments**: Explain complex logic or decisions
+- **Update documentation**: Include relevant documentation updates
+- **Test thoroughly**: Add any test case or change the current tests.
+
+## Creating the Pull Request
+
+### 1. Push Your Branch
+```bash
+git push origin task-id_your_feature-_ame
+```
+
+### 2. Create PR
+- **Create branches**: Use Git comands to create feature branches
+- **Push files**: Use Git commands to commit and push multiple files
+- **Create pull requests**: Use GitHub MCP tools to create PRs with proper title, description, and template formatting
+
+Alternative: If GitHub MCP server tools are not available provide the user with the title, description and link to create the PR.
+Make sure you suggest to install the MCP integration
+
+### 3. PR Template Requirements
+Follow the following format:
+
+```
+## Context
+
+Provide context about the changes and explanation about the implementation.
+
+## Evidences
+
+Explain how this change has been tested.
+```
+
+**General Description**
+- Provide detailed description of changes
+- Read the Linear Task for more context
+
+## Instructions for AI
+
+When helping users create pull requests:
+- **Use GitHub MCP server tools when available**: Prioritize using GitHub MCP server tools for creating pull requests programmatically
+- **Use context7 MCP server**: Use the context7 tools to retrieve the updated documentation and examples.
+- **Always remind to format code before committing**: PRs will be automatically rejected if Swift files are not properly formatted
+- **Suggest running formatting check**: Recommend `./scripts/check-formatting.sh` before submitting PR
+- Suggest running tests to verify changes
+- Read the linnear task to get
+- Recommend breaking down large changes into smaller PRs
+- Ensure proper branch naming, commit messages, and PR descriptions follow the project standards
