@@ -145,7 +145,24 @@ variable "config" {
 }
 ```
 
-If the `config` variable becomes too complex, group related configuration into separate objects:
+If the `config` variable becomes too complex, group related configuration into nested objects within `config`:
+```hcl
+variable "config" {
+  type = object({
+    proxy = object({
+      host        = string
+      path_prefix = optional(string, "/api")
+    })
+    downstream_service = object({
+      host = string
+      port = optional(number, 443)
+    })
+  })
+  description = "Configuration for the resource."
+}
+```
+
+Alternatively, for very complex modules, you can split configuration into separate top-level variables:
 ```hcl
 variable "nodes" {
   type = object({
@@ -153,6 +170,14 @@ variable "nodes" {
     count         = optional(number, 3)
   })
   description = "Node configuration."
+}
+
+variable "storage" {
+  type = object({
+    size_gb = number
+    type    = optional(string, "gp3")
+  })
+  description = "Storage configuration."
 }
 ```
 
