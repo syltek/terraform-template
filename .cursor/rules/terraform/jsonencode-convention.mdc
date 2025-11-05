@@ -1,0 +1,109 @@
+---
+description: Convention for using jsonencode instead of heredoc for JSON policies and configurations
+globs: "**/*.tf"
+alwaysApply: false
+---
+
+# JSON Policy and Configuration Convention
+
+This rule establishes the standard for writing JSON policies and configurations in Terraform modules.
+
+## Use jsonencode Instead of Heredoc
+
+**ALWAYS** use `jsonencode()` instead of heredoc syntax (`<<EOF...EOF`) for JSON policies and configurations.
+
+### Why jsonencode is Better
+
+1. **Type Safety**: Terraform validates the JSON structure at plan time
+2. **Syntax Highlighting**: Better IDE support and error detection
+3. **Consistency**: Uniform formatting and structure
+4. **Maintainability**: Easier to modify and review
+5. **Error Prevention**: Catches JSON syntax errors early
+
+### Examples
+
+**❌ DON'T - Use heredoc syntax:**
+```hcl
+resource "aws_iam_role" "example" {
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      }
+    }
+  ]
+}
+EOF
+}
+```
+
+**✅ DO - Use jsonencode:**
+```hcl
+resource "aws_iam_role" "example" {
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+```
+
+### Common Use Cases
+
+1. **IAM Policies**: `assume_role_policy`, `inline_policy`
+2. **S3 Bucket Policies**: `policy` attribute
+3. **Lambda Function Policies**: `policy` attribute
+4. **API Gateway Policies**: `policy` attribute
+5. **CloudFormation Templates**: `template_body` attribute
+
+### Best Practices
+
+1. **Use HCL syntax**: Write the policy using HCL object syntax, not JSON strings
+2. **Add comments**: Use `#` comments within the jsonencode block for complex policies
+3. **Format consistently**: Use proper indentation and line breaks
+4. **Validate early**: Test the policy structure during development
+
+### Example with Comments
+
+```hcl
+resource "aws_iam_role_policy" "example" {
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # Allow read access to specific S3 bucket
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.bucket_name}",
+          "arn:aws:s3:::${var.bucket_name}/*"
+        ]
+      }
+    ]
+  })
+}
+```
+
+## Instructions for AI
+
+When working with Terraform modules:
+- **Always use jsonencode()** for any JSON policy or configuration
+- **Convert existing heredoc syntax** to jsonencode when refactoring
+- **Use HCL object syntax** within jsonencode blocks, not JSON strings
+- **Add descriptive comments** for complex policies
+- **Validate the structure** to ensure proper JSON output
