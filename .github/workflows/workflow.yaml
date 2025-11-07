@@ -1,14 +1,15 @@
-name: Terraform Pipeline
+# Uncomment me to use the workflow
+# name: Terraform Pipeline
 
-on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
+# on:
+#   pull_request:
+#     branches:
+#       - main
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  terraform:
-    uses: syltek/gh-workflows/.github/workflows/terraform_modules.yaml@main
-    secrets: inherit
+# jobs:
+#   terraform:
+#     uses: syltek/gh-workflows/.github/workflows/terraform_modules.yaml@main
+#     secrets: inherit
