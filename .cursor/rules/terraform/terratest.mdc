@@ -1,0 +1,247 @@
+---
+description: Rules for Terratest configuration and usage in Terraform modules at Playtomic.
+globs: test/**/*
+alwaysApply: false
+---
+
+# Terratest Configuration Conventions
+
+This rule establishes the standard patterns, file structure, and conventions for Terratest (Go-based testing) in Terraform modules at Playtomic.
+
+## Test Directory Structure
+
+### Required Files
+
+Terratest configuration is located in the `test/` folder and MUST include:
+
+```
+test/
+├── main_test.go    # Main test file with test functions
+├── config.go       # Configuration struct and environment variable reading
+├── go.mod          # Go module dependencies
+├── go.sum          # Go module checksums
+└── README.md       # Test documentation (optional)
+```
+
+## Configuration Management
+
+### Config Struct Definition
+
+ALL environment variables MUST be defined in the `Config` struct in `config.go`:
+
+```go
+type Config struct {
+    Username   string // The GitHub user name
+    ShortSha   string // The short Git commit hash
+    AwsRegion  string // The AWS region
+    AwsRoleArn string // The AWS role ARN
+    DdApiKey   string // The Datadog API key
+    DdAppKey   string // The Datadog Application key
+    // Add additional fields as needed
+}
+```
+
+### Adding New Variables
+
+**CRITICAL**: If you need extra variables for testing:
+
+1. **Add the field to the Config struct** in `config.go`
+2. **Read the variable in GetConfig()** function with proper fallback logic
+3. **Use the variable in createTerraformOptions()** in `main_test.go`
+
+**Example - Adding a new variable:**
+
+```go
+// Step 1: Add to Config struct
+type Config struct {
+    // ... existing fields ...
+    NewVariable string // Description of the new variable
+}
+
+// Step 2: Read in GetConfig() function
+func GetConfig() (*Config, error) {
+    // ... existing code ...
+    
+    config.NewVariable, found = os.LookupEnv("TF_VAR_new_variable")
+    if !found || config.NewVariable == "" {
+        config.NewVariable, found = os.LookupEnv("NEW_VARIABLE")
+        if !found || config.NewVariable == "" {
+            errstrings = append(errstrings, "NewVariable (either TF_VAR_new_variable or NEW_VARIABLE) must be set")
+        }
+    }
+    
+    // ... rest of function ...
+}
+
+// Step 3: Use in createTerraformOptions() in main_test.go
+func createTerraformOptions(config *Config) *terraform.Options {
+    return &terraform.Options{
+        TerraformDir: terraformDir,
+        MaxRetries:   0,
+        Vars: map[string]interface{}{
+            // ... existing vars ...
+            "new_variable": config.NewVariable,
+        },
+    }
+}
+```
+
+## Environment Variable Reading
+
+### Variable Resolution Pattern
+
+The `GetConfig()` function follows a specific pattern for reading environment variables:
+
+1. **First priority**: Check for `TF_VAR_*` prefixed variables (local test environment)
+2. **Second priority**: Check for standard environment variables (GitHub workflow or global)
+3. **Error handling**: If neither is found, add to error list
+
+**Standard pattern:**
+```go
+config.FieldName, found = os.LookupEnv("TF_VAR_field_name")
+if !found || config.FieldName == "" {
+    config.FieldName, found = os.LookupEnv("FIELD_NAME")
+    if !found || config.FieldName == "" {
+        errstrings = append(errstrings, "FieldName (either TF_VAR_field_name or FIELD_NAME) must be set")
+    }
+}
+```
+
+### Variable Sources
+
+Variables can be set from:
+
+- **Local development**: Set `TF_VAR_*` environment variables in your shell
+- **GitHub Actions**: Expose variables in the workflow (they become environment variables)
+- **CI/CD**: Standard environment variables are automatically available
+
+### Special Handling
+
+Some variables require special handling:
+
+- **ShortSha**: Automatically truncated to 8 characters if longer
+- **Username**: Can be prefixed with `ci-` in terraform options (e.g., `fmt.Sprintf("ci-%s", config.Username)`)
+
+## Main Test File Structure
+
+### Standard Test Structure
+
+The `main_test.go` file MUST follow this structure:
+
+```go
+package test
+
+import (
+    "fmt"
+    "testing"
+    "github.com/gruntwork-io/terratest/modules/terraform"
+)
+
+const terraformDir = "../testing"
+
+func TestMain(t *testing.T) {
+    config, err := GetConfig()
+    if err != nil {
+        t.Fatalf("Failed to get config: %v", err)
+    }
+
+    terraformOptions := createTerraformOptions(config)
+    defer terraform.Destroy(t, terraformOptions)
+
+    // Run main test stages
+    t.Run("infrastructure_deployment", func(t *testing.T) {
+        testInfrastructureDeployment(t, terraformOptions)
+    })
+}
+
+func createTerraformOptions(config *Config) *terraform.Options {
+    return &terraform.Options{
+        TerraformDir: terraformDir,
+        MaxRetries:   0,
+        Vars: map[string]interface{}{
+            "test_author":  fmt.Sprintf("ci-%s", config.Username),
+            "test_id":      config.ShortSha,
+            "aws_region":   config.AwsRegion,
+            "aws_role_arn": config.AwsRoleArn,
+            "dd_api_key":   config.DdApiKey,
+            "dd_app_key":   config.DdAppKey,
+            // Add additional variables here
+        },
+    }
+}
+
+func testInfrastructureDeployment(t *testing.T, terraformOptions *terraform.Options) {
+    t.Run("initial_apply", func(t *testing.T) {
+        terraform.InitAndApply(t, terraformOptions)
+    })
+
+    t.Run("idempotency", func(t *testing.T) {
+        terraform.ApplyAndIdempotent(t, terraformOptions)
+    })
+}
+```
+
+### Terraform Variables Injection
+
+**CRITICAL**: All Terraform variables used in `testing/test.tf` MUST be:
+
+1. **Defined in the Config struct** in `config.go`
+2. **Read from environment variables** in `GetConfig()`
+3. **Injected in createTerraformOptions()** in `main_test.go`
+
+The `Vars` map in `createTerraformOptions()` is where Terraform variables are passed to the test execution. Variable names in the map must match the variable names in `testing/test.tf`.
+
+## Testing Workflow
+
+### Standard Test Flow
+
+1. **GetConfig()**: Reads all required environment variables
+2. **createTerraformOptions()**: Creates Terraform options with variables from config
+3. **TestMain()**: Orchestrates test execution
+4. **testInfrastructureDeployment()**: Runs actual Terraform operations
+5. **defer terraform.Destroy()**: Ensures cleanup after tests
+
+### Required Test Cases
+
+At minimum, tests MUST include:
+
+- **initial_apply**: First Terraform apply to create resources
+- **idempotency**: Verify that a second apply makes no changes
+
+## Best Practices
+
+### Variable Naming
+
+- Use **snake_case** for Terraform variable names in the `Vars` map
+- Use **PascalCase** for Go struct field names in Config
+- Use **UPPER_SNAKE_CASE** for environment variable names
+
+### Error Handling
+
+- Always check for missing required variables
+- Return descriptive error messages listing all missing variables
+- Use `strings.Join()` to combine multiple error messages
+
+### Code Organization
+
+- Keep `config.go` focused on configuration management only
+- Keep `main_test.go` focused on test orchestration
+- Add additional test helper functions as needed, but keep them organized
+
+## Integration with GitHub Workflows
+
+### Environment Variable Exposure
+
+When adding new variables that need to be available in GitHub Actions:
+
+1. Add the variable to the workflow secrets/variables
+2. Expose it as an environment variable in the workflow
+3. Update `config.go` to read from the appropriate environment variable name
+
+The standard variables are automatically available:
+- `GITHUB_ACTOR` → Username
+- `GITHUB_SHA` → ShortSha (automatically truncated)
+- `AWS_REGION` → AwsRegion
+- `AWS_ROLE_ARN` → AwsRoleArn
+- `TERRAFORM_DD_API_KEY` → DdApiKey
+- `TERRAFORM_DD_APP_KEY` → DdAppKey
