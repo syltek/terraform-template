@@ -1,0 +1,32 @@
+---
+description: Linear context for the INF team
+globs:
+alwaysApply: true
+---
+
+## Linear Context
+
+> ⚠️ **CRITICAL: ALWAYS ask for confirmation before creating any Linear issue.**
+> Never create issues automatically without explicit user approval.
+
+- **Tool**: Linear
+- **Primary team key**: `INF`
+- **Typical scope**: SRE / Infrastructure work (platform, clusters, shared services)
+
+### How to interpret Linear issues
+
+- **Team**:
+  - Assume issues you see or reference are under the **INF** team unless explicitly stated otherwise.
+  - When creating example issue IDs or links, use the `INF` team key (for example, `INF-123`).
+
+- **Issue types** (typical for INF):
+  - Infrastructure changes (Terraform, Kubernetes, networking, CI/CD, observability).
+  - Platform tooling and developer experience work.
+  - Reliability and performance improvements.
+
+### How to talk about Linear in answers
+
+- Use phrases like “the **INF Linear board**” or “the **INF team’s Linear project**” when giving examples about planning or tracking work.
+- When suggesting tickets to create, use example titles that fit INF’s scope, for example:
+  - `INF-123 – Harden Terraform backend S3 bucket policy`
+  - `INF-124 – Improve alerting for pro cluster ingress latency`
