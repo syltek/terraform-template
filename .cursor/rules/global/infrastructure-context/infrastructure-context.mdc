@@ -1,0 +1,261 @@
+---
+description: Playtomic infrastructure context and general guidelines for SRE work
+globs:
+alwaysApply: true
+---
+
+# Infrastructure Context
+
+## General Guidelines
+
+> ⚠️ **CRITICAL: If something is not clear, ALWAYS ask for clarification before proceeding.**
+> Don't make assumptions about requirements, configurations, or expected behavior.
+
+### Core Principles
+
+- **Ask before assuming** - When requirements, context, or expected behavior is unclear, ask the user for clarification rather than guessing
+- **Never commit directly to main** - ALWAYS create a branch and open a Pull Request for any changes. Direct commits to `main` are strictly forbidden
+- **Ask before creating Linear issues** - ALWAYS ask for confirmation before creating any Linear issue
+- **Reference existing patterns** - Before implementing something new, check existing code for established patterns and conventions
+- **Validate with the user** - For significant changes or when multiple approaches exist, present options and let the user decide
+
+### GitHub Organization
+
+- **Organization**: `syltek`
+- **Repository URLs**: `https://github.com/syltek/<repository-name>`
+
+## SRE Team Mission
+
+Support anyone who wants to run code in production by creating the underlying services and tools to make building, shipping and running code as easy, efficient and reliable as possible.
+
+**Key Performance Indicators (DORA Metrics):**
+- Deployment Frequency
+- Lead Time for Changes
+- Change Failure Rate
+- Time to Restore Service
+
+## Cloud Providers
+
+| Provider | Purpose |
+|----------|---------|
+| **AWS** | All workloads (compute, networking, storage) |
+| **GCP** | Data workloads |
+
+## AWS Accounts
+
+| Account ID | Name | Purpose |
+|------------|------|---------|
+| `959503083933` | Pro Workload | Production workloads |
+| `118590098072` | Develop Workload | Development workloads |
+| `961341543972` | SRE Pro | SRE production resources, Terraform state backend |
+| `600627336997` | SRE Develop | SRE development resources |
+| `817453159872` | Identity | OIDC configuration for GitHub Actions, SSO |
+| `147997148769` | Management | AWS Organization management |
+| `182264891850` | Security | Security and compliance tools |
+
+## AWS Region
+
+All infrastructure is deployed in **eu-central-1** (Frankfurt).
+
+## Networking
+
+VPC structure:
+- **3 Public subnets** (one per AZ)
+- **3 Private subnets** (one per AZ)
+
+## DNS
+
+- **Public Domain:** `playtomic.io`
+- **Internal Domains:** `{account}.internalplaytomic.com` (one per AWS account)
+- **CDN/Proxy:** Cloudflare
+
+## Kubernetes Clusters
+
+| Cluster Name | Environment | Purpose | AWS Account |
+|--------------|-------------|---------|-------------|
+| `pro` | Production | Production workloads | Pro Workload |
+| `dev-anemone-1` | Development | Development workloads | Develop Workload |
+| `pro-sre-1` | Production | SRE cluster | SRE Pro |
+| `dev-sre-1` | Development | SRE cluster | SRE Develop |
+
+### Namespaces (Workload Clusters)
+
+| Namespace | Purpose |
+|-----------|---------|
+| `anemone` | Backend services |
+| `playtomic` | Frontend services |
+
+### Cluster Components
+
+- **ArgoCD:** GitOps CD tool
+- **Datadog Agents:** Collect observability data
+- **AWS Load Balancer Controller:** Create AWS ALBs from K8s objects
+- **Traefik:** Ingress controller with NLB
+
+### Ingress
+
+- **Ingress Controller:** Traefik
+- **Load Balancer:** NLB (Network Load Balancer)
+- **Service Mesh:** None
+
+## Databases
+
+| Database | Provider | Purpose |
+|----------|----------|---------|
+| **Aurora MySQL** | AWS RDS | SQL - Shared cluster per environment, each service has its own schema |
+| **MongoDB** | Atlas | NoSQL - Cluster per environment |
+| **Neo4j** | GrapheneDB | Graph database for player relationships |
+
+## Events/Messaging
+
+- **Platform:** Apache Kafka
+- **Provider:** Aiven
+- **Setup:** Dedicated cluster per environment
+
+## Backend Services
+
+- **Language:** Java 17
+- **Framework:** Spring Boot 2.x / 3.x
+- **Architecture:** Stateless services (scalable, easily replicated)
+- **Communication:** REST endpoints and Kafka events
+- **Deployment:** Kubernetes Deployments
+- **Exposure:** Application Load Balancer (ALB) in public subnets
+
+## Deployment Stack
+
+- **Cloud Provider:** AWS (workloads), GCP (data)
+- **Container Orchestration:** Kubernetes (EKS)
+- **GitOps:** ArgoCD
+- **Package Manager:** Helm charts
+- **Source Control:** GitHub (organization: `syltek`)
+- **Container Registry:** Nexus (EC2 instance)
+- **Secrets Management:** Sealed Secrets
+- **Monitoring:** Datadog
+
+## Secrets Management
+
+- **Tool:** Sealed Secrets
+- **Storage:** Encrypted secrets stored in `clusters-config` repository
+- **Flow:** Secrets are encrypted client-side and can only be decrypted by the Sealed Secrets controller in the cluster
+
+## Terraform
+
+- **State Backend:** S3 + DynamoDB in SRE Pro account (`961341543972`)
+- **Backend Config:** See `terraform-backend` repository
+- **Module Naming:** `terraform-${provider}-${name}` (e.g., `terraform-aws-lambda`)
+
+## CI/CD
+
+- **Platform:** GitHub Actions
+- **AWS Authentication:** OIDC (configured in Identity account `817453159872`)
+
+### GitHub Actions Architecture
+
+| Repository | Purpose |
+|------------|---------|
+| `gh-workflows` | Reusable GitHub Actions **workflows** (called with `uses: syltek/gh-workflows/.github/workflows/...`) |
+| `gh-actions` | Reusable GitHub Actions **actions** (called with `uses: syltek/gh-actions/<action-name>@...`). This repository contains all custom composite actions used across workflows |
+
+> **Important:** When creating or modifying workflows, check `gh-actions` for existing actions that can be reused instead of duplicating logic.
+
+### Main Workflows
+
+| Workflow | Purpose |
+|----------|---------|
+| `build` | Builds the Maven project |
+| `build-and-deploy` | Build Maven, build/push Docker image, update K8s deployment |
+| `update-pr-template` | Updates PR template of a repository |
+
+## Observability
+
+- **Platform:** Datadog
+- **Agents:** Deployed in EKS clusters
+- **Data:** Metrics, traces, logs
+
+### Monitoring Best Practices
+
+- Use `max` operator when threshold is `< value` (prevents false alarms from short spikes)
+- Use `min` operator when threshold is `> value` (prevents false alarms from short spikes)
+- Monitor descriptions should include:
+  - Detailed explanation of the problem
+  - Potential consequences
+  - Possible root causes
+  - Temporary solutions
+  - Helpful commands and dashboards
+
+## Key Repositories
+
+### GitOps & Kubernetes
+
+| Repository | Purpose |
+|------------|---------|
+| `clusters-config` | GitOps repository for ArgoCD, K8s resources |
+| `helm-charts` | Helm charts used in infrastructure |
+| `anemone-k8s-cluster` | EKS clusters for develop/pro |
+
+### CI/CD
+
+| Repository | Purpose |
+|------------|---------|
+| `gh-workflows` | Reusable GitHub Actions workflows (workflow templates) |
+| `gh-actions` | Reusable GitHub Actions (composite actions used in workflows) |
+| `anemone-workflows` | Anemone-specific workflows (⚠️ deprecated - use `gh-workflows` instead) |
+
+### Terraform
+
+| Repository | Purpose |
+|------------|---------|
+| `terraform-backend` | Terraform state backend configuration |
+| `terraform-template` | Template for creating terraform modules |
+| `aws-account-governance` | AWS accounts configuration |
+
+### Databases
+
+| Repository | Purpose |
+|------------|---------|
+| `anemone-rds-aurora-cluster` | RDS Aurora clusters resources |
+| `anemone-mongodb-atlas-cluster` | MongoDB Atlas clusters resources |
+| `anemone-kafka-aiven-cluster` | Kafka Aiven clusters resources |
+
+### Infrastructure
+
+| Repository | Purpose |
+|------------|---------|
+| `env-datadog` | Datadog infrastructure |
+| `env-cloudflare` | Cloudflare infrastructure |
+| `env-aiven` | Aiven infrastructure |
+| `aws-identity` | AWS SSO and access management |
+| `aws-security` | Security and compliance tools |
+| `aws-pro-route53` | Route53 records for `playtomic.io` |
+
+### Services
+
+| Repository | Purpose |
+|------------|---------|
+| `playtomic-svc-catalog` | Service catalog |
+| `docker-images` | Base Docker images for applications |
+| `sre-tools` | Miscellaneous SRE scripts |
+
+## Deployment Flow
+
+```
+Code Change → GitHub Actions → Build & Push to Nexus
+                                      ↓
+                              clusters-config
+                                      ↓
+                                   ArgoCD
+                                      ↓
+                              Kubernetes Cluster
+```
+
+1. GitHub Actions build container images and push to Nexus
+2. CI updates the image tag in the K8s deployment file
+3. ArgoCD watches `clusters-config` and syncs changes
+4. Services deployed to appropriate namespace (`anemone` or `playtomic`)
+
+## Environment Naming Convention
+
+- **Production:** `pro` (full name) / `pro` (short)
+- **Development:** `develop` (full name) / `dev` (short)
+
+For Datadog unified service tagging `env` tag, use: `develop` or `pro`
