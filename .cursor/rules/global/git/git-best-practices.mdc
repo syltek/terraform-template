@@ -1,0 +1,126 @@
+---
+description: Git and GitHub best practices for Playtomic repositories
+globs:
+alwaysApply: true
+---
+
+# Git Best Practices
+
+> ⚠️ **CRITICAL: Every commit MUST include the Linear Issue ID in the title.**
+> Format: `{LINEAR ISSUE ID}: Description` (e.g., `INF-123: Add CloudWatch alarms`)
+> **NEVER create commits without a Linear Issue ID.**
+
+> 🚫 **NEVER commit directly to the `main` branch.**
+> ALWAYS create a feature branch and open a Pull Request.
+
+Follow these guidelines to maintain a clean and maintainable Git history. These practices are based on [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#summary).
+
+## 1. Branch Naming Convention
+
+Branch names must follow this format:
+
+```
+{Linear Issue ID}_task_purpose
+```
+
+### Examples
+
+- `INF-123_add_cloudwatch_alarms`
+- `INF-456_fix_terraform_module`
+- `INF-789_update_eks_cluster_config`
+
+## 2. One Commit per Pull Request
+
+To create a **linear Git history**, adhere to the principle of **one commit per pull request**:
+
+- Use **squash merging** to consolidate all changes in a pull request into a single commit
+- Only merge the PR when changes are ready for production deployment and sufficient validation evidence has been provided
+- Maintain a linear history - avoid merge commits
+
+## 3. Commit Message Format
+
+### Commit Title
+
+Commit titles must follow this format:
+
+```
+{LINEAR ISSUE ID}: Descriptive naming
+```
+
+For versioned repositories, include the conventional commit type:
+
+```
+{LINEAR ISSUE ID}: type: Descriptive naming
+```
+
+### Commit Body
+
+Commit messages **must include a proper description** explaining:
+- **What** changes were made
+- **Why** the changes were necessary (motivation)
+- Any relevant context or impact
+
+
+### Examples
+
+**Simple commit:**
+```
+INF-123: Add CloudWatch alarms for EKS cluster
+
+Added CPU and memory utilization alarms to detect resource exhaustion
+early. This helps the team respond proactively before services are
+impacted.
+```
+
+**Versioned repository (with type):**
+```
+INF-456: fix: Resolve API endpoint edge case handling
+
+Fixed an issue where the API would return 500 errors when receiving
+empty payloads. The root cause was missing null checks in the request
+validation layer.
+```
+
+**Breaking change:**
+```
+INF-789: feat!: Rename critical API methods
+
+BREAKING CHANGE: Renamed authenticateUser to authenticate and
+getUserData to getUser. This aligns with our new API naming conventions.
+
+All consumers must update their integrations before upgrading.
+```
+
+**Note:** While versioning guidelines are specifically for versioned repositories (e.g., Terraform modules), they are considered **best practice** for all repositories.
+
+## 4. Rebase Instead of Merge
+
+- Always **rebase your branch** on top of the `main` branch before opening or merging a pull request
+- Avoid unnecessary merge commits to keep the history clean and linear
+
+### Before Opening a PR
+
+```bash
+git fetch origin
+git rebase origin/main
+```
+
+### If Conflicts Occur
+
+```bash
+git rebase origin/main
+# Resolve conflicts
+git add .
+git rebase --continue
+```
+
+## Summary
+
+1. **Never commit to main** - ALWAYS use feature branches and Pull Requests
+2. **Branch naming** - `{Linear Issue ID}_task_purpose`
+3. **One commit per PR** - Use squash merging
+4. **Commit title** - `{LINEAR ISSUE ID}: Descriptive naming`
+5. **Commit body** - Include description and motivation for changes
+6. **Conventional commits** - Use `fix`, `feat`, `doc`, or indicate breaking changes (for versioned repos)
+7. **Rebase, don't merge** - Keep history linear
+8. **Only merge when ready** - Ensure validation before merging to main
