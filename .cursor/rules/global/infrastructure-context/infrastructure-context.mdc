@@ -172,6 +172,20 @@ VPC structure:
 - **Agents:** Deployed in EKS clusters
 - **Data:** Metrics, traces, logs
 
+### Datadog Unified Service Tagging
+
+> ⚠️ **MANDATORY: All Kubernetes deployments MUST include Datadog unified service tagging labels.**
+
+Every Kubernetes workload (Helm releases, cluster addons, etc.) must have these labels:
+
+```hcl
+"tags.datadoghq.com/env"     = var.metadata.environment  # develop or pro
+"tags.datadoghq.com/service" = "<service-name>"          # Service identifier
+"tags.datadoghq.com/version" = "<version>"               # Component version
+```
+
+See `terraform_code/kubernetes/datadog-unified-service-tagging.mdc` for implementation patterns.
+
 ### Monitoring Best Practices
 
 - Use `max` operator when threshold is `< value` (prevents false alarms from short spikes)

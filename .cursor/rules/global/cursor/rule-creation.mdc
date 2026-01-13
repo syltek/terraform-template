@@ -5,6 +5,10 @@ alwaysApply: false
 ---
 # Cursor Rules Location
 
+> ⚠️ **IMPORTANT: All cursor rules MUST be created in the `sre-cursor-rules` repository.**
+> Never create cursor rules directly in individual project repositories.
+> See `cursor-rules-management.mdc` for details.
+
 Enforces the location, naming conventions, and structure for all other cursor rules files.
 
 1. Always place rule files in PROJECT_ROOT/.cursor/rules/:
