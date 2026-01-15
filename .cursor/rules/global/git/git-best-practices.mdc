@@ -114,6 +114,33 @@ git add .
 git rebase --continue
 ```
 
+## 5. Content Style
+
+### Commit Messages
+
+- **Concise titles** - Action-oriented, no filler (e.g., "Add alarms" not "This commit adds...")
+- **Brief body** - What changed and why in 2-4 lines; skip obvious context
+- **Technical language** - Use precise terminology, avoid verbose explanations
+
+### Pull Request Descriptions
+
+- **Short summary** - One sentence describing the change
+- **Bullet points** - List changes, not paragraphs
+- **No redundancy** - Don't repeat the commit message verbatim
+- **Skip background** - Assume reviewer understands the codebase
+
+**Example PR:**
+
+```markdown
+## Summary
+Add missing SRE repositories to repo-mappings.yaml
+
+## Changes
+- Added 7 Datadog terraform modules
+- Added k8s-gh-actions-runners
+- Sorted all lists alphabetically
+```
+
 ## Summary
 
 1. **Never commit to main** - ALWAYS use feature branches and Pull Requests
@@ -124,3 +151,4 @@ git rebase --continue
 6. **Conventional commits** - Use `fix`, `feat`, `doc`, or indicate breaking changes (for versioned repos)
 7. **Rebase, don't merge** - Keep history linear
 8. **Only merge when ready** - Ensure validation before merging to main
+9. **Be concise** - Use technical language, avoid verbose content

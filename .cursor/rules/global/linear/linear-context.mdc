@@ -30,3 +30,31 @@ alwaysApply: true
 - When suggesting tickets to create, use example titles that fit INF’s scope, for example:
   - `INF-123 – Harden Terraform backend S3 bucket policy`
   - `INF-124 – Improve alerting for pro cluster ingress latency`
+
+### Issue Content Style
+
+When creating or updating Linear issues:
+
+- **Concise titles** - Use technical, action-oriented language (e.g., "Add CloudWatch alarms for EKS" not "We need to implement monitoring...")
+- **Brief descriptions** - State the problem and solution directly; avoid background explanations
+- **Bullet points over prose** - Use task lists and bullet points, not paragraphs
+- **No filler phrases** - Skip "This issue is about...", "The goal of this task is...", etc.
+
+**Example:**
+
+```markdown
+# ❌ Verbose
+Title: We need to review and update the configuration for missing repositories
+
+Description: This issue is created to track the work needed to review all of our
+SRE repositories and make sure they are properly configured. The goal is to ensure
+that all repositories receive the appropriate cursor rules...
+
+# ✅ Concise
+Title: Add missing SRE repositories to sre-cursor-rules
+
+Description:
+- Review SRE repositories in syltek org
+- Add missing repos to `repo-mappings.yaml`
+- Sync rules to new repositories
+```
