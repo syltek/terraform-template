@@ -11,5 +11,5 @@
 
 # jobs:
 #   terraform:
-#     uses: syltek/gh-workflows/.github/workflows/terraform_modules.yaml@main
+#     uses: syltek/gh-workflows/.github/workflows/terraform_modules.yaml@v1
 #     secrets: inherit
