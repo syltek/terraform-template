@@ -1,0 +1,12 @@
+# Uncomment me to use the workflow
+# name: Terraform Module - Pull Request
+# on:
+#   pull_request:
+#     branches: [main, master]
+# permissions:
+#   id-token: write
+#   contents: read
+# jobs:
+#   terraform:
+#     uses: syltek/gh-workflows/.github/workflows/terraform-modules-pr.yaml@v2
+#     secrets: inherit

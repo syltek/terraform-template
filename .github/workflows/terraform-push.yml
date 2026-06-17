@@ -1,0 +1,11 @@
+# Uncomment me to use the workflow
+# name: Terraform Module - Push
+# on:
+#   push:
+#     branches: [main, master]
+# permissions:
+#   contents: write
+# jobs:
+#   tag:
+#     uses: syltek/gh-workflows/.github/workflows/terraform-modules-push.yaml@v2
+#     secrets: inherit
